@@ -24,6 +24,19 @@ def compare_mse(sarima_model, training_set, testing_set):
     
     return train_mse, test_mse
 
+def compare_mse_members(sarima_model, training_set, testing_set, kind):
+    predict_train = sarima_model.predict(start = 0, end = len(training_set))
+    predict_test = sarima_model.predict(start = len(training_set), end = 
+                                        len(training_set) + len(testing_set))
+    
+    train_mse = mean_squared_error(training_set[kind], predict_train[:-1])
+    test_mse = mean_squared_error(testing_set[kind], predict_test[:-1])
+    
+    print('Training MSE: ', "{:.2e}".format(train_mse))
+    print('Testing MSE: ', "{:.2e}".format(test_mse))
+    
+    return train_mse, test_mse
+
 def compare_mse_exog(sarima_model, training_df, testing_df):
     exog_train = np.array([training_df['avg_temp'], training_df['avg_precips']]).T
     exog_test = np.array([testing_df['avg_temp'], testing_df['avg_precips']]).T

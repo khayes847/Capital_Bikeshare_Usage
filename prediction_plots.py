@@ -53,7 +53,7 @@ def prediction_plot(model, training_set, testing_set, p,d,q,P,D,Q,m):
     ax1.legend(['Train','Test', 'Model Prediction on Training Set'],prop={'size': 24})
     ax2.legend(['Train','Test', 'Model Prediction on Testing Set'],prop={'size': 24})
     
-def forecast_plot(model, master, n_forecast,p,d,q,P,D,Q,m):
+def prediction_plot_members(model, training_set, testing_set,kind,p,d,q,P,D,Q,m):
     
     if m == 52:
         freq ='Week'
@@ -63,27 +63,138 @@ def forecast_plot(model, master, n_forecast,p,d,q,P,D,Q,m):
         lw = 4
     else:
         lw = 2
+        freq = '(test)'
     
     order = f'({p},{d},{q})'
     seasonal_order = f'({P},{D},{Q},{m})'
     
+    predict_train = model.predict()
+    predict_test = model.forecast(len(testing_set))
     
-    fig = plt.figure(figsize = (20,10))
-    plt.plot(master.index, master['count'], lw = lw, color = 'mediumorchid')
+    fig = plt.figure(figsize = (20,20))
+    ax1 = plt.subplot(211)
+    ax2 = plt.subplot(212)
     
+    ax1.plot(training_set.index,training_set[kind], lw = lw, color = 'mediumturquoise')
+    ax1.plot(testing_set.index,testing_set[kind], lw = lw, color = 'blue')
+    ax1.plot(training_set.index,predict_train, lw = lw, color = 'magenta')
     
-    forecast = model.predict(len(master),len(master)+ n_forecast-1)
+    ax2.plot(training_set.index,training_set[kind], lw = lw, color = 'mediumturquoise')
+    ax2.plot(testing_set.index,testing_set[kind], lw = lw, color = 'blue')
+    ax2.plot(testing_set.index,predict_test, lw = lw, color = 'orange')
     
+    ax1.set_xlabel('Date', fontsize = 20)
+    ax1.set_ylabel('Count', fontsize = 20)
+    
+    ax2.set_xlabel('Date', fontsize = 20)
+    ax2.set_ylabel('Count', fontsize = 20)
+    
+    ax1.set_title(f'Number of {kind} Bike Rentals per {freq} Time Series, SARIMA {order}{seasonal_order}', fontsize = 30)
+    ax2.set_title(f'Number of {kind} Bike Rentals per {freq} Time Series, SARIMA {order}{seasonal_order}', fontsize = 30)
+    
+    ax1.legend(['Train','Test', 'Model Prediction on Training Set'],prop={'size': 24})
+    ax2.legend(['Train','Test', 'Model Prediction on Testing Set'],prop={'size': 24})
+    
+
+def model_plot(model, master):
+    fig = plt.figure(figsize = (18,9))
+    plt.plot(master['count']/100000, lw = 4, color = 'royalblue');
+    plt.plot(master.index,model.predict()/100000, lw = 5, color = 'black', ls = ':')
+    plt.title('Number of Bike Rentals per Month: Model of Historical Data', fontsize = 30)
+    plt.xlabel('Year', fontsize = 25)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.ylabel('Ride Count (100k)', fontsize = 25)
+    plt.xlim([master.index[0],master.index[-1]])
+    plt.ylim(0)
+    plt.legend(['Data','Model'],prop={'size': 24})
+    
+def model_plot_members(model, master, kind):
+    fig = plt.figure(figsize = (18,9))
+    plt.plot(master[kind]/100000, lw = 4, color = 'royalblue');
+    plt.plot(master.index,model.predict()/100000, lw = 5, color = 'black', ls = ':')
+    plt.title(f'Number of {kind} Bike Rentals per Month: Model of Historical Data', fontsize = 30)
+    plt.xlabel('Year', fontsize = 25)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.ylabel('Ride Count (100k)', fontsize = 25)
+    plt.xlim([master.index[0],master.index[-1]])
+    plt.ylim(0)
+    plt.legend(['Data','Model'],prop={'size': 24})
+    
+def model_plot_members_both(model_member, model_casual, master):
+    fig = plt.figure(figsize = (18,9))
+    plt.plot(master.Member/100000, lw = 4, color = 'mediumseagreen');
+    plt.plot(master.Casual/100000, lw = 4, color = 'mediumorchid');
+    plt.plot(master.index,model_member.predict()/100000, lw = 5, color = 'black', ls = ':')
+    plt.plot(master.index,model_casual.predict()/100000, lw = 5, color = 'black', ls = ':')
+    plt.title(f'Number of Member and Casual Bike Rentals per Month: Model of Historical Data', fontsize = 30)
+    plt.xlabel('Year', fontsize = 25)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.ylabel('Ride Count (100k)', fontsize = 25)
+    plt.xlim([master.index[0],master.index[-1]])
+    plt.ylim(0)
+    plt.legend(['Member Data','Casual Data','Models'],prop={'size': 24})
+
+
+def forecast_plot(model, master, n_forecast, predict_int_alpha = .2):
+    
+    fig = plt.figure(figsize = (18,9))
+    plt.plot(master.index, master['count']/100000, lw = 4, color = 'royalblue')
+    
+    forecast = model.forecast(n_forecast)
+    predict_int = model.get_forecast(n_forecast).conf_int(alpha = predict_int_alpha)
     forecast_dates = pd.date_range(master.index[-1], freq = 'm', periods=n_forecast + 1).tolist()[1:]
 
-    plt.plot(forecast_dates, forecast, lw = 6, color = 'indigo')
+    plt.plot(forecast_dates, forecast/100000, lw = 6, color = 'darkblue')
+    plt.plot(forecast.index, predict_int['lower count']/100000, color = 'lightblue', lw = 4)
+    plt.plot(forecast.index, predict_int['upper count']/100000, color = 'lightblue', lw = 4)
+    plt.fill_between(forecast.index,predict_int['lower count']/100000,predict_int['upper count']/100000, color = 'lightblue')
+    plt.xlim([master.index[0],forecast.index[-1]])
+    plt.ylim(0)
+    plt.xlabel('Year', fontsize = 25)
+    plt.ylabel('Ride Count (100k)', fontsize = 25)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.legend(['Data','Forecast', '80% Prediction Interval'],prop={'size': 24})
+    plt.title(f'{n_forecast}-Month Forecast on Bike Rentals per Month', fontsize = 30)
+
+
     
-    plt.xlabel('Date', fontsize = 20)
-    plt.ylabel('Count', fontsize = 20)
-    plt.legend(['Data','Prediction'],prop={'size': 24})
-    plt.title(f'{n_forecast}-{freq} Prediction on Bike Rentals Using SARIMA {order}{seasonal_order}',fontsize = 30)
+def forecast_plot_members_both(model_member,model_casual, master, n_forecast, predict_int_alpha = .2):
     
+    fig = plt.figure(figsize = (18,9))
+    plt.plot(master.index, master['Member']/100000, lw = 4, color = 'mediumseagreen')
+    plt.plot(master.index, master['Casual']/100000, lw = 4, color = 'mediumorchid')
     
+    forecast_member = model_member.forecast(n_forecast)
+    forecast_casual = model_casual.forecast(n_forecast)
+    predict_int_member = model_member.get_forecast(n_forecast).conf_int(alpha = predict_int_alpha)
+    predict_int_casual = model_casual.get_forecast(n_forecast).conf_int(alpha = predict_int_alpha)
+    forecast_dates = pd.date_range(master.index[-1], freq = 'm', periods=n_forecast + 1).tolist()[1:]
+
+    plt.plot(forecast_dates, forecast_member/100000, lw = 6, color = 'darkgreen')
+    plt.plot(forecast_dates, forecast_casual/100000, lw = 6, color = 'indigo')
+    
+    plt.plot(forecast_casual.index, predict_int_casual['lower Casual']/100000, color = 'thistle', lw = 4)
+    plt.plot(forecast_casual.index, predict_int_casual['upper Casual']/100000, color = 'thistle', lw = 4)
+    
+    plt.plot(forecast_member.index, predict_int_member['lower Member']/100000, color = 'powderblue', lw = 4)
+    plt.plot(forecast_member.index, predict_int_member['upper Member']/100000, color = 'powderblue', lw = 4)
+    
+    plt.fill_between(forecast_casual.index,predict_int_casual['lower Casual']/100000,predict_int_casual['upper Casual']/100000, color = 'thistle')
+    plt.fill_between(forecast_member.index,predict_int_member['lower Member']/100000,predict_int_member['upper Member']/100000, color = 'powderblue')
+    
+    plt.xlim([master.index[0],forecast_member.index[-1]])
+    plt.ylim(0)
+    plt.xlabel('Year', fontsize = 25)
+    plt.ylabel('Ride Count (100k)', fontsize = 25)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.legend(['Member Rides','Casual Rides', 'Forecast on Member Rides','Forecast on Casual Rides'],prop={'size': 24})
+    plt.title(f'{n_forecast}-Month Forecast on Bike Rentals per Month', fontsize = 30)
+     
     
     
     
@@ -126,45 +237,11 @@ def prediction_plot_exog(model, training_df, testing_df, p,d,q,P,D,Q,m):
     ax2.set_xlabel('Date', fontsize = 20)
     ax2.set_ylabel('Count', fontsize = 20)
     
-    ax1.set_title(f'Number of Bike Rentals per {freq} Time Series, SARIMA {order}{seasonal_order}', fontsize = 30)
-    ax2.set_title(f'Number of Bike Rentals per {freq} Time Series, SARIMA {order}{seasonal_order}', fontsize = 30)
+    ax1.set_title(f'Number of Bike Rentals per {freq} Time Series, SARIMA w/ Weather {order}{seasonal_order}', fontsize = 30)
+    ax2.set_title(f'Number of Bike Rentals per {freq} Time Series, SARIMA w/ Weather {order}{seasonal_order}', fontsize = 30)
     
     ax1.legend(['Train','Test', 'Model Prediction on Training Set'],prop={'size': 24})
     ax2.legend(['Train','Test', 'Model Prediction on Testing Set'],prop={'size': 24})
-    
-def forecast_plot(model, master, n_forecast,p,d,q,P,D,Q,m):
-    
-    if m == 52:
-        freq ='Week'
-        lw = 2
-    elif m == 12:
-        freq = 'Month'
-        lw = 4
-    else:
-        lw = 2
-    
-    order = f'({p},{d},{q})'
-    seasonal_order = f'({P},{D},{Q},{m})'
-    
-    
-    fig = plt.figure(figsize = (20,10))
-    plt.plot(master.index, master['count'], lw = lw, color = 'mediumorchid')
-    
-    
-    forecast = model.predict(len(master),len(master)+ n_forecast-1)
-    
-    forecast_dates = pd.date_range(master.index[-1], freq = 'm', periods=n_forecast + 1).tolist()[1:]
-
-    plt.plot(forecast_dates, forecast, lw = 6, color = 'indigo')
-    
-    plt.xlabel('Date', fontsize = 20)
-    plt.ylabel('Count', fontsize = 20)
-    plt.legend(['Data','Prediction'],prop={'size': 24})
-    plt.title(f'{n_forecast}-{freq} Prediction on Bike Rentals Using SARIMA {order}{seasonal_order}',fontsize = 30)
-       
-        
-    
-    
     
 
 
