@@ -7,6 +7,7 @@ import prediction_plots2 as pplot
 import functions as f
 import mse
 import operator
+from collections import OrderedDict
 
 
 def test_stationarity(data, window, title):
@@ -34,28 +35,34 @@ def stationarity_autocorrelation_test_original(data):
     pplot.acf_pacf(data)
 
 
-def sarima(train_df, test_df, orders, seasonal_orders):
+def sarima(train_df, test_df ):
     """Runs Sarima test on data sets according to orders"""
+    orders = [(2, 1, 0), (2, 1, 1), (2, 1, 2), (2, 1, 3)]
+    seasonal_orders = [(0, 1, 0, 12), (1, 1, 0, 12), (0, 1, 1, 12)]
     mse_dict_train = {}
     mse_dict_test = {}
-    for o_n in orders:
+    for o_val in orders:   
         for s_o in seasonal_orders:
-            model = sm.tsa.statespace.SARIMAX(train_df['count'],
-                                              order=(o_n[0], o_n[1],
-                                                     o_n[2]),
-                                              seasonal_order=(s_o[0],
-                                                              s_o[1],
-                                                              s_o[2],
-                                                              s_o[3])
-                                              ).fit()
+            model = sm.tsa.statespace.SARIMAX(train_df['member'], order=(o_val[0], o_val[1], o_val[2]), 
+                                              seasonal_order=(s_o[0], s_o[1], s_o[2], s_o[3])).fit()
             print(model.summary())
-            train_mse, test_mse = mse.compare_mse(model, train_df, test_df)
-            pplot.prediction_plot(model, train_df, test_df, o_n[0],
-                                  o_n[1], o_n[2], s_o[0], s_o[1], s_o[2], s_o[3])
-            mse_dict_train[f'{o_n},{s_o}'] = {"{:.2e}".format(train_mse)}
-            mse_dict_test[f'{o_n},{s_o}'] = {"{:.2e}".format(test_mse)}
-    return mse_dict_train, mse_dict_test
-     
+            train_mse, test_mse = mse.compare_mse_members(model, train_df, test_df, 'member')
+            pplot.prediction_plot_members(model, train_df, test_df, 'member',
+                                          o_val[0], o_val[1], o_val[2], s_o[0],
+                                          s_o[1], s_o[2], s_o[3])
+            mse_member_dict_75[f'{o},{s_o}'] = {'Training MSE': "{:.2e}".format(train_mse),
+                                                'Testing MSE': "{:.2e}".format(test_mse)}
+            
+            model = sm.tsa.statespace.SARIMAX(train_df['casual'], order=(o_val[0], o_val[1], o_val[2]), 
+                                              seasonal_order=(s_o[0], s_o[1], s_o[2], s_o[3])).fit()
+            print(model.summary())
+            train_mse, test_mse = mse.compare_mse_members(model, train_df, test_df, 'casual')
+            pplot.prediction_plot_members(model, train_df, test_df, 'casual',
+                                          o_val[0], o_val[1], o_val[2], s_o[0],
+                                          s_o[1], s_o[2], s_o[3])
+            mse_member_dict_75[f'{o},{s_o}'] = {'Training MSE': "{:.2e}".format(train_mse),
+                                                'Testing MSE': "{:.2e}".format(test_mse)}
+
 
 
 def stationarity_autocorrelation_test_first_diff(data):
@@ -108,8 +115,8 @@ def best_model_sarima(train_df, test_df):
     orders = [(2, 1, 0), (2, 1, 1), (2, 1, 2), (2, 1, 3)]
     seasonal_orders = [(0, 1, 0, 12), (1, 1, 0, 12), (0, 1, 1, 12)]
     mse_train, mse_test = sarima(train_df, test_df, orders, seasonal_orders)
-    sorted_train = dict(sorted(mse_train.items(), key=operator.itemgetter(0),reverse=True))
-    sorted_test = dict(sorted(mse_test.items(), key=operator.itemgetter(0),reverse=True))
+    sorted_train = OrderedDict(sorted(mse_train.items(), key=lambda x: x[1], reverse=True))
+    sorted_test = OrderedDict(sorted(mse_test.items(), key=lambda x: x[1], reverse=True))
     print('MSEs for the training set in descending order:')
     f.print_dict(sorted_train)
     print('MSEs for the test set in descending order:')
@@ -120,10 +127,5 @@ def forecast_original(data):
     """Creates forecast data for original data"""
     model_01112 = sm.tsa.statespace.SARIMAX(data['count'], trend='n', order=(2, 1, 2),
                                             seasonal_order=(0, 1, 1, 12)).fit()
-    model_11012 = sm.tsa.statespace.SARIMAX(data['count'], trend='n', order=(2, 1, 2),
-                                            seasonal_order=(1, 1, 0, 12)).fit()
     print('Model (2,1,2)(0,1,1,12):')
     pplot.forecast_plot(model_01112, data)
-    
-    print('12 month forecast for model (2,1,2)(1,1,0,12)')
-    pplot.forecast_plot(model_11012, data)

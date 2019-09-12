@@ -29,6 +29,7 @@ def initial_plot(data):
     ax.xaxis.set_major_locator(mdates.YearLocator())
     ax.xaxis.set_major_formatter(DateFormatter("%Y"))
     plt.title('Number of Bike Rentals per Month, Time Series', fontsize=30)
+    plt.show()
 
 
 def split_plot(train, test):
@@ -43,6 +44,7 @@ def split_plot(train, test):
     plt.ylabel('Ride Count (100k)', fontsize=20)
 
     plt.title('Number of Bike Rentals per Month, Time Series', fontsize=30)
+    plt.show()
 
 
 def decomposition(data):
@@ -128,6 +130,7 @@ def prediction_plot(model, training_set, testing_set, p, d, q, P, D, Q, m):
                 'Model Prediction on Training Set'], prop={'size': 24})
     ax2.legend(['Train', 'Test',
                 'Model Prediction on Testing Set'], prop={'size': 24})
+    plt.show()
 
 
 def forecast_plot(model, master, n_forecast=12, predict_int_alpha=.2):
@@ -298,3 +301,21 @@ def auto_forecast_plot(automodel, master, n_forecast):
     plt.legend(['Data', 'Prediction'], prop={'size': 24})
     plt.title(f'{n_forecast}-{freq} Prediction on Bike '
               f'Rentals Using SARIMA {order}{seasonal_order}', fontsize=30)
+
+
+def initial_member_graph(data):
+    """Creates initial graph based on membership"""
+    fig = plt.figure(figsize = (18, 8))
+    plt.plot(data.casual/100000, lw = 5, color = 'mediumorchid')
+    plt.plot(data.member/100000, lw = 5, color = 'green')
+    plt.xlabel('Year', fontsize = 25)
+    plt.ylabel('Ride Count (100k)', fontsize = 25)
+    plt.xticks(fontsize = 20)
+    plt.yticks(fontsize = 20)
+    plt.legend(['Casual','Member'],prop={'size': 24})
+    plt.xlim([master_m.index[0],master_m.index[-1]])
+    plt.ylim(0)
+    plt.title('Number of Casual and Member Rides per Month', fontsize = 30)
+    plt.show()
+
+
