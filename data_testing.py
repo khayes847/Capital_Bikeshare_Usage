@@ -35,33 +35,70 @@ def stationarity_autocorrelation_test_original(data):
     pplot.acf_pacf(data)
 
 
-def sarima(train_df, test_df ):
-    """Runs Sarima test on data sets according to orders"""
+def sarima(train_m, test_m):
+    """Runs Sarima test on member data sets according to orders"""
+    orders = [(2, 1, 0), (2, 1, 1), (2, 1, 2), (2, 1, 3)]
+    seasonal_orders = [(0, 1, 0, 12), (1, 1, 0, 12), (0, 1, 1, 12)]
+    mse_dict = {}
+    for o in orders:
+        for s_o in seasonal_orders:
+            model = sm.tsa.statespace.SARIMAX(train_m['count'], order=(o[0], o[1], o[2]),
+                                              seasonal_order=(s_o[0], s_o[1], s_o[2], s_o[3])).fit()
+            print(model.summary())
+            train_mse, test_mse = mse.compare_mse(model, train_m, test_m)
+            pplot.prediction_plot(model, train_m, test_m,
+                                  o[0], o[1], o[2], s_o[0], s_o[1], s_o[2], s_o[3])
+
+            mse_dict[f'{o},{s_o}'] = {'Training MSE': "{:.2e}".format(
+                train_mse), 'Testing MSE': "{:.2e}".format(test_mse)}
+    return train_mse, test_mse
+
+
+def sarima_members(train_df, test_df):
+    """Runs Sarima test on member data sets according to orders"""
     orders = [(2, 1, 0), (2, 1, 1), (2, 1, 2), (2, 1, 3)]
     seasonal_orders = [(0, 1, 0, 12), (1, 1, 0, 12), (0, 1, 1, 12)]
     mse_dict_train = {}
     mse_dict_test = {}
+    mse_member_dict_75 = {}
+    mse_casual_dict_75 = {}
     for o_val in orders:   
         for s_o in seasonal_orders:
-            model = sm.tsa.statespace.SARIMAX(train_df['member'], order=(o_val[0], o_val[1], o_val[2]), 
-                                              seasonal_order=(s_o[0], s_o[1], s_o[2], s_o[3])).fit()
+            print(f'Orders: {o_val}. Seasonal Orders: {s_o}')
+            model = sm.tsa.statespace.SARIMAX(train_df['member'], 
+                                              order=(o_val[0], o_val[1], 
+                                                     o_val[2]),
+                                              seasonal_order=(s_o[0],
+                                                              s_o[1],
+                                                              s_o[2],
+                                                              s_o[3])).fit()
             print(model.summary())
-            train_mse, test_mse = mse.compare_mse_members(model, train_df, test_df, 'member')
+            train_mse, test_mse = mse.compare_mse_members(model, train_df,
+                                                          test_df, 'member')
             pplot.prediction_plot_members(model, train_df, test_df, 'member',
                                           o_val[0], o_val[1], o_val[2], s_o[0],
                                           s_o[1], s_o[2], s_o[3])
-            mse_member_dict_75[f'{o},{s_o}'] = {'Training MSE': "{:.2e}".format(train_mse),
-                                                'Testing MSE': "{:.2e}".format(test_mse)}
+            mse_member_dict_75[f'{o_val},{s_o}'] = {'Training MSE':
+                                                "{:.2e}".format(train_mse),
+                                                'Testing MSE':
+                                                "{:.2e}".format(test_mse)}
             
-            model = sm.tsa.statespace.SARIMAX(train_df['casual'], order=(o_val[0], o_val[1], o_val[2]), 
-                                              seasonal_order=(s_o[0], s_o[1], s_o[2], s_o[3])).fit()
+            model = sm.tsa.statespace.SARIMAX(train_df['casual'],
+                                              order=(o_val[0], o_val[1],
+                                                     o_val[2]), 
+                                              seasonal_order=(s_o[0], s_o[1],
+                                                              s_o[2],
+                                                              s_o[3])).fit()
             print(model.summary())
-            train_mse, test_mse = mse.compare_mse_members(model, train_df, test_df, 'casual')
+            train_mse, test_mse = mse.compare_mse_members(model, train_df,
+                                                          test_df, 'casual')
             pplot.prediction_plot_members(model, train_df, test_df, 'casual',
                                           o_val[0], o_val[1], o_val[2], s_o[0],
                                           s_o[1], s_o[2], s_o[3])
-            mse_member_dict_75[f'{o},{s_o}'] = {'Training MSE': "{:.2e}".format(train_mse),
-                                                'Testing MSE': "{:.2e}".format(test_mse)}
+            mse_member_dict_75[f'{o_val},{s_o}'] = {'Training MSE':
+                                                "{:.2e}".format(train_mse),
+                                                'Testing MSE':
+                                                "{:.2e}".format(test_mse)}
 
 
 
@@ -112,15 +149,7 @@ def best_model_sarima(train_df, test_df):
     """Tests a range of models using sarima for best fit"""
     print('The purpose of this test is to determine the model with the best '
           'fit\n using Sarima.')
-    orders = [(2, 1, 0), (2, 1, 1), (2, 1, 2), (2, 1, 3)]
-    seasonal_orders = [(0, 1, 0, 12), (1, 1, 0, 12), (0, 1, 1, 12)]
-    mse_train, mse_test = sarima(train_df, test_df, orders, seasonal_orders)
-    sorted_train = OrderedDict(sorted(mse_train.items(), key=lambda x: x[1], reverse=True))
-    sorted_test = OrderedDict(sorted(mse_test.items(), key=lambda x: x[1], reverse=True))
-    print('MSEs for the training set in descending order:')
-    f.print_dict(sorted_train)
-    print('MSEs for the test set in descending order:')
-    f.print_dict(sorted_test)
+    mse_train, mse_test = sarima(train_df, test_df)
 
 
 def forecast_original(data):
