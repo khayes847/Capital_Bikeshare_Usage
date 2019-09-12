@@ -119,58 +119,54 @@ def manage_cols_member(data):
     data['date_of_trip'] = [item.date() for item in data['Start date']]
     data.drop(columns = ['Start date', 'End date', 'Start station number', 
                         'Start station','End station number', 'End station',
-                        'Bike number', 'Member type'], inplace = True)
+                        'Bike number'], inplace = True)
     data = data.rename(columns = {'Duration': 'count'})
     return data
 
 
 def data_by_date_member(year):
-    """Creates list to be used in determining members"""
-    if year == 2018:
+    if year == '2018':
         df_concat = pd.DataFrame()
-        for month in ['01', '02', '03', '04', '05', '06',
-                      '07', '08', '09', '10', '11', '12']:
+        for month in ['01','02','03','04','05','06','07','08','09','10','11',
+                      '12']:
             if month == '11':
-                path = (f'data/2018-capitalbikeshare-tripdata/2018{month}'
-                        '-capitalbikeshare-tripdata.csv')
-                data = pd.read_csv(path)
-                data = data.iloc[0:202376]
-                data = manage_cols_member(data)
-                data = data.groupby('date_of_trip').count()
-                df_concat = pd.concat([df_concat, data])
+                path ='data/'+ year + month + '-capitalbikeshare-tripdata.csv'
+                df = pd.read_csv(path)
+                df = df.iloc[0:202376]
+                df = manage_cols_member(df)
+                df = df.groupby(['date_of_trip','Member type']).count()
+                df_concat = pd.concat([df_concat, df])
             else:
-                path = (f'data/2018-capitalbikeshare-tripdata/2018{month}'
-                        '-capitalbikeshare-tripdata.csv')
-                data = pd.read_csv(path)
-                data = manage_cols_member(data)
-                data = data.groupby('date_of_trip').count()
-                df_concat = pd.concat([df_concat, data])
-    elif year == 2019:
+                
+                path = 'data/' + year + month + '-capitalbikeshare-tripdata.csv'
+                df =pd.read_csv(path)
+                df = manage_cols_member(df)
+                df = df.groupby(['date_of_trip','Member type']).count()
+                df_concat = pd.concat([df_concat, df])
+            
+    elif year == '2019':
         df_concat = pd.DataFrame()
-        for month in ['01', '02', '03', '04', '05', '06', '07']:
-            path = (f'data/2019-capitalbikeshare-tripdata/2019{month}'
-                    '-capitalbikeshare-tripdata.csv')
-            data = pd.read_csv(path)
-            data = manage_cols_member(data)
-            data = data.groupby('date_of_trip').count()
-            df_concat = pd.concat([df_concat, data])
-    elif year in [2010, 2011]:
+        for month in ['01','02','03','04','05','06','07']:
+            path = 'data/'+year + month + '-capitalbikeshare-tripdata.csv'
+            df =pd.read_csv(path)
+            df = manage_cols_member(df)
+            df = df.groupby(['date_of_trip','Member type']).count()
+            df_concat = pd.concat([df_concat, df])
+    elif year == '2010' or year == '2011':
         path = f'data/{year}-capitalbikeshare-tripdata.csv'
-        data = pd.read_csv(path)
-        data = manage_cols_member(data)
-        data = data.groupby('date_of_trip').count()
-        df_concat = data
+        df =pd.read_csv(path)
+        df = manage_cols_member(df)
+        df = df.groupby(['date_of_trip','Member type']).count()
+        df_concat = df
     else:
         df_concat = pd.DataFrame()
-        for quart in ['Q1', 'Q2', 'Q3', 'Q4']:
-            path = (f'data/{year}-capitalbikeshare-tripdata/{year}{quart}'
-                    '-capitalbikeshare-tripdata.csv')
-            data =pd.read_csv(path)
-            data = manage_cols_member(data)
-            data = data.groupby('date_of_trip').count()
-            df_concat = pd.concat([df_concat, data])
+        for q in ['Q1','Q2','Q3','Q4']:
+            path = f'data/{year}-capitalbikeshare-tripdata/{year}{q}-capitalbikeshare-tripdata.csv'
+            df =pd.read_csv(path)
+            df = manage_cols_member(df)
+            df = df.groupby(['date_of_trip','Member type']).count()
+            df_concat = pd.concat([df_concat, df])
     return df_concat
-
 
 def create_member():
     """Creates list including member status"""
