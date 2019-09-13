@@ -3,9 +3,8 @@ from statsmodels.tsa.stattools import adfuller
 import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqplot
 import pandas as pd
-import prediction_plots2 as pplot
+import prediction_plots_final as pplot
 import functions as f
-import mse
 import operator
 from collections import OrderedDict
 
