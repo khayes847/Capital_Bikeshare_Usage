@@ -2,6 +2,7 @@
 from statsmodels.tsa.stattools import adfuller
 import statsmodels.api as sm
 from statsmodels.graphics.gofplots import qqplot
+from sklearn.metrics import mean_squared_error
 import pandas as pd
 import prediction_plots_final as pplot
 import functions as f
@@ -44,7 +45,7 @@ def sarima(train_m, test_m):
             model = sm.tsa.statespace.SARIMAX(train_m['count'], order=(o[0], o[1], o[2]),
                                               seasonal_order=(s_o[0], s_o[1], s_o[2], s_o[3])).fit()
             print(model.summary())
-            train_mse, test_mse = mse.compare_mse(model, train_m, test_m)
+            train_mse, test_mse = compare_mse(model, train_m, test_m)
             pplot.prediction_plot(model, train_m, test_m,
                                   o[0], o[1], o[2], s_o[0], s_o[1], s_o[2], s_o[3])
 
@@ -72,7 +73,7 @@ def sarima_members(train_df, test_df):
                                                               s_o[2],
                                                               s_o[3])).fit()
             print(model.summary())
-            train_mse, test_mse = mse.compare_mse_members(model, train_df,
+            train_mse, test_mse = compare_mse_members(model, train_df,
                                                           test_df, 'member')
             pplot.prediction_plot_members(model, train_df, test_df, 'member',
                                           o_val[0], o_val[1], o_val[2], s_o[0],
@@ -157,3 +158,24 @@ def forecast_original(data):
                                             seasonal_order=(0, 1, 1, 12)).fit()
     print('Model (2,1,2)(0,1,1,12):')
     pplot.forecast_plot(model_01112, data)
+
+def compare_mse(sarima_model, training_set, testing_set):
+    predict_train = sarima_model.predict(start=0, end=(len(training_set)))
+    predict_test = sarima_model.predict(start=(len(training_set)), end=(len(training_set) + len(testing_set)))
+    train_mse = mean_squared_error(training_set['count'], predict_train[:-1])
+    test_mse = mean_squared_error(testing_set['count'], predict_test[:-1])
+    print('Training MSE: ', '{:.2e}'.format(train_mse))
+    print('Testing MSE: ', '{:.2e}'.format(test_mse))
+    return (
+     train_mse, test_mse)
+
+
+def compare_mse_members(sarima_model, training_set, testing_set, kind):
+    predict_train = sarima_model.predict(start=0, end=(len(training_set)))
+    predict_test = sarima_model.predict(start=(len(training_set)), end=(len(training_set) + len(testing_set)))
+    train_mse = mean_squared_error(training_set[kind], predict_train[:-1])
+    test_mse = mean_squared_error(testing_set[kind], predict_test[:-1])
+    print('Training MSE: ', '{:.2e}'.format(train_mse))
+    print('Testing MSE: ', '{:.2e}'.format(test_mse))
+    return (
+     train_mse, test_mse)
