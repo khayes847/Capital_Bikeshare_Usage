@@ -25,24 +25,33 @@ def train_split(data, train_percent=.75):
     return train_m, test_m
 
 
-def order_difference(data):
+def order_difference(data, var='count', diff=True, s_diff=False):
     """
-    Creates dataset with order difference
+    Takes time-series dataset, and returns the dataset with
+    the specified number of regular and seasonal differences.
+    
+    Parameters:
+    data: The time-series dataset in question.
+    var: Variable to be differenced
+    diff: Boolean, whether to add a one-month difference.
+    s_diff: Boolean, whether to add a 12-month difference.
+    
+    Returns:
+    data2: The time-series model with the 
+          specified differences enacted.
     """
-    data_diff = data.copy()
-    data_diff['count'] = data['count'].diff()
-    data_diff.dropna(inplace=True)
-    return data_diff
-
-
-def seasonal_difference(data):
-    """
-    Creates dataset with seasonal difference
-    """
-    season = data.copy()
-    season['count'] = data['count'] - data['count'].shift(12)
-    season.dropna(inplace=True)
-    return season
+    data2 = data.copy()
+    if diff:
+        data2[var] = data2[var].diff()
+        data2.dropna(inplace=True)
+        if s_diff:
+            data2[var] = data2[var] - data2[var].shift(12)
+            data2.dropna(inplace=True)
+            return data2
+        return data2
+    data2[var] = data2[var] - data2[var].shift(12)
+    data2.dropna(inplace=True)
+    return data2
 
 
 def master_breakdown():
