@@ -13,6 +13,7 @@ from matplotlib.dates import DateFormatter
 from statsmodels.graphics.gofplots import qqplot
 from statsmodels.tsa.seasonal import seasonal_decompose
 import statsmodels.api as sm
+import functions as f
 
 
 def initial_plot(data):
@@ -81,80 +82,76 @@ def stationarity_plot(timeseries, window, title):
     plt.show()
 
 
-def acf_pacf(data):
+def acf_pacf(data, var='count'):
     """
     Plots autocorrelation function (ACF) and partial autocorrelation function
     (PACF) outputs
     """
     fig = plt.figure(figsize=(12, 8))
     ax1 = fig.add_subplot(211)
-    fig = sm.graphics.tsa.plot_acf(data['count'].iloc[1:], lags=13, ax=ax1)
+    fig = sm.graphics.tsa.plot_acf(data[var].iloc[1:], lags=13, ax=ax1)
     ax2 = fig.add_subplot(212)
-    fig = sm.graphics.tsa.plot_pacf(data['count'].iloc[1:], lags=13, ax=ax2)
+    fig = sm.graphics.tsa.plot_pacf(data[var].iloc[1:], lags=13, ax=ax2)
 
 
-def prediction_plot(model, training_set, testing_set, p, d, q, P, D, Q, m):
+def prediction_plot(model, data, orders, s_orders, test=False, var='count'):
     """
     Plots model prediction on top of original data for both training and
     testing data for a given model. This is to act as a visual aid and not an
     indicator of which model is most optimal. This function is for part 1 of
     the project (all monthly rentals).
     """
-    if m == 52:
-        freq = 'Week'
-        lw = 2
-    elif m == 12:
-        freq = 'Month'
-        lw = 4
-    else:
-        lw = 2
-        freq = '(test)'
-
-    order = f'({p},{d},{q})'
-    seasonal_order = f'({P},{D},{Q},{m})'
+    if test:
+        data, testing_set = f.train_split(data)
+        predict_test = model.forecast(len(testing_set))
 
     predict_train = model.predict()
-    predict_test = model.forecast(len(testing_set))
 
     fig = plt.figure(figsize=(20, 20))
     ax1 = plt.subplot(211)
-    ax2 = plt.subplot(212)
+    if test:
+        ax2 = plt.subplot(212)
 
-    ax1.plot(training_set.index, training_set['count'],
-             lw=lw, color='mediumturquoise')
-    ax1.plot(testing_set.index, testing_set['count'], lw=lw, color='blue')
-    ax1.plot(training_set.index, predict_train, lw=lw, color='magenta')
+    ax1.plot(data.index, data[var],
+             lw=4, color='mediumturquoise')
+    if test:
+        ax1.plot(testing_set.index, testing_set[var], lw=4, color='blue')
+    ax1.plot(data.index, predict_train, lw=4, color='magenta')
 
-    ax2.plot(training_set.index, training_set['count'],
-             lw=lw, color='mediumturquoise')
-    ax2.plot(testing_set.index, testing_set['count'], lw=lw, color='blue')
-    ax2.plot(testing_set.index, predict_test, lw=lw, color='orange')
+    if test:
+        ax2.plot(data.index, data[var],
+                lw=4, color='mediumturquoise')
+        ax2.plot(testing_set.index, testing_set[var], lw=4, color='blue')
+        ax2.plot(testing_set.index, predict_test, lw=4, color='orange')
 
     ax1.set_xlabel('Date', fontsize=20)
     ax1.set_ylabel('Count', fontsize=20)
 
-    ax2.set_xlabel('Date', fontsize=20)
-    ax2.set_ylabel('Count', fontsize=20)
+    if test:
+        ax2.set_xlabel('Date', fontsize=20)
+        ax2.set_ylabel('Count', fontsize=20)
 
-    ax1.set_title(f'Number of Bike Rentals per {freq} Time Series, '
-                  f'SARIMA {order}{seasonal_order}', fontsize=30)
-    ax2.set_title(f'Number of Bike Rentals per {freq} Time Series, '
-                  f'SARIMA {order}{seasonal_order}', fontsize=30)
+    ax1.set_title(f'Number of Bike Rentals per Month Time Series, '
+                  f'SARIMA {orders}{s_orders}', fontsize=30)
+    if test:
+        ax2.set_title(f'Number of Bike Rentals per Month Time Series, '
+                     f'SARIMA {orders}{s_orders}', fontsize=30)
 
-    ax1.legend(['Train', 'Test',
+    ax1.legend(['Train',
                 'Model Prediction on Training Set'], prop={'size': 24})
-    ax2.legend(['Train', 'Test',
-                'Model Prediction on Testing Set'], prop={'size': 24})
+    if test:
+        ax2.legend(['Train', 'Test',
+                   'Model Prediction on Testing Set'], prop={'size': 24})
     plt.show()
 
 
-def forecast_plot(model, master, n_forecast=12, predict_int_alpha=.2):
+def forecast_plot(model, master, n_forecast=12, predict_int_alpha=.2, var='count'):
     """
     Plots predicted forecast and prediction interval alongside original data.
     This function is for part 1 of the project (all monthly rentals).
     """
     fig = plt.figure(figsize=(18, 9))
-    plt.plot(master.index, master['count'] / 100000,
+    plt.plot(master.index, master[var] / 100000,
              lw=4, color='mediumorchid')
     forecast = model.forecast(n_forecast)
     predict_int = model.get_forecast(n_forecast
@@ -162,12 +159,12 @@ def forecast_plot(model, master, n_forecast=12, predict_int_alpha=.2):
     forecast_dates = pd.date_range(master.index[-1], freq='m',
                                    periods=n_forecast + 1).tolist()[1:]
     plt.plot(forecast_dates, forecast / 100000, lw=6, color='indigo')
-    plt.plot(forecast.index, predict_int['lower count'] / 100000,
+    plt.plot(forecast.index, predict_int[f'lower {var}'] / 100000,
              color='darkgray', lw=4)
-    plt.plot(forecast.index, predict_int['upper count'] / 100000,
+    plt.plot(forecast.index, predict_int[f'upper {var}'] / 100000,
              color='darkgray', lw=4)
-    plt.fill_between(forecast.index, predict_int['lower count'] / 100000,
-                     predict_int['upper count'] / 100000, color='darkgray')
+    plt.fill_between(forecast.index, predict_int[f'lower {var}'] / 100000,
+                     predict_int[f'upper {var}'] / 100000, color='darkgray')
     plt.xlim([master.index[0], forecast.index[-1]])
     plt.ylim(0)
     plt.xlabel('Year', fontsize=20)
@@ -178,14 +175,6 @@ def forecast_plot(model, master, n_forecast=12, predict_int_alpha=.2):
                prop={'size': 24})
     plt.title(f'{n_forecast}-Month Forecast on Bike Rentals per Month',
               fontsize=30)
-    plt.show()
-
-    model.resid.hist()
-    plt.title("Residual Histogram", fontsize=20)
-    plt.show()
-
-    qqplot(model.resid, line='s')
-    plt.title('Q-Q Plot', fontsize=20)
     plt.show()
 
 
