@@ -32,91 +32,60 @@ def test_stationarity(data, window, title):
     print(dfoutput)
 
 
-def stationarity_autocorrelation_test_original(data):
+def stationarity_test(data, var='count', diff=False, s_diff=False):
     """
     Tests stationarity and autocorrelation of time series
     """
-    print('The purpose of this test is to determine the stationarity and '
-          'autocorrelation\n of the original time series.')
-    test_stationarity(data['count'], window=12,
-                      title="Original Time series")
-    p.acf_pacf(data)
+    data2 = data.copy()
+    if diff and s_diff:
+        data2 = f.order_difference(data2, var=var, diff=True, s_diff=True)
+        g_title = "Seasonal Difference of First Order Difference"
+    elif diff:
+        data2 = f.order_difference(data2, var=var, diff=True, s_diff=False)
+        g_title = "First Order Difference"
+    elif s_diff:
+        data2 = f.order_difference(data2, var=var, diff=False, s_diff=True)
+        g_title = "Seasonal Difference"
+    else:
+        g_title = "Original Time Series"
+    
+    test_stationarity(data2[var], window=12, title=g_title)
+
+    #p.acf_pacf(data)
 
 
-def stationarity_autocorrelation_test_first_diff(data):
-    """
-    Tests stationarity and autocorrelation of first difference
-    """
-    print('The purpose of this test is to determine the stationarity and '
-          'autocorrelation\n of the first difference.')
-    first_diff = f.order_difference(data)
-    test_stationarity(first_diff['count'], window=12,
-                      title="First Order Difference")
-    p.acf_pacf(first_diff)
 
 
-def stationarity_autocorrelation_test_second_diff(data):
-    """
-    Tests stationarity and autocorrelation of second difference
-    """
-    print('The purpose of this test is to determine the stationarity and '
-          'autocorrelation\n of the second difference.')
-    first_diff = f.order_difference(data)
-    second_diff = f.order_difference(first_diff)
-    test_stationarity(second_diff['count'], window=12,
-                      title="Second Order Difference")
-    p.acf_pacf(second_diff)
 
-
-def stationarity_test_seasonal_diff(data):
-    """
-    Tests stationarity and autocorrelation of seasonal difference
-    """
-    print('The purpose of this test is to determine the stationarity and '
-          'autocorrelation\n of the seasonal difference.')
-    season = f.seasonal_difference(data)
-    test_stationarity(season['count'], window=12,
-                      title="Seasonal Difference")
-    p.acf_pacf(season)
-
-
-def stationarity_test_seasonal_first_diff(data):
-    """
-    Tests stationarity and autocorrelation of first difference and first
-    seasonal difference
-    """
-    print('The purpose of this test is to determine the stationarity and '
-          'autocorrelation\n of the seasonal difference of the first '
-          'difference.')
-    first_diff = f.order_difference(data)
-    season_first = f.order_difference(first_diff)
-    test_stationarity(season_first['count'], window=12,
-                      title="Seasonal Difference of First Order Difference")
-    p.acf_pacf(season_first)
-
-
-def sarima(train_df, test_df):
+def sarima(data, orders, s_orders, var='count', test=False):
     """
     Evaluates SARIMA models for all combinations of orders and seasonal orders
     to be tested. Plots model output on top of training and test data as visual
     aid, prints training and testing mean squared error for each model. This
     function is for part 1 of the project (all monthly rentals).
     """
-    orders = [(2, 1, 0), (2, 1, 1), (2, 1, 2), (2, 1, 3)]
-    seasonal_orders = [(0, 1, 0, 12), (1, 1, 0, 12), (0, 1, 1, 12)]
+    best = 0
+    best_o = []
+    best_so = []
 
-    for o in orders:
-        for s_o in seasonal_orders:
-            model = sm.tsa.statespace.SARIMAX(train_df['count'],
-                                              order=(o[0], o[1], o[2]),
+    for o_val in orders:
+        for s_val in s_orders:
+            model = sm.tsa.statespace.SARIMAX(data[var],
+                                              order=(o_val[0], o_val[1], o_val[2]),
                                               seasonal_order=(
-                                                  s_o[0], s_o[1], s_o[2],
-                                                  s_o[3])).fit()
-            print(model.summary())
-            _, _ = compare_mse(model, train_df, test_df)
-            p.prediction_plot(model, train_df, test_df,
-                                  o[0], o[1], o[2], s_o[0], s_o[1], s_o[2],
-                                  s_o[3])
+                                                  s_val[0], s_val[1], s_val[2],
+                                                  s_val[3])).fit()
+            print(f'{o_val}, {s_val}:')
+            mse = compare_mse(model, data, return_val=True, var=var)
+            if best==0 or best>mse:
+                best = mse
+                best_o = o_val
+                best_so = s_val
+                best_model = model
+    print(f'Best MSE: {(best):.2e}')
+    print(f'Best Model: {best_o}, {best_so}')
+            
+    p.prediction_plot(best_model, data, best_o, best_so, test=False, var=var)
 
 
 def sarima_breakdown(train_df, test_df):
@@ -163,21 +132,27 @@ def sarima_breakdown(train_df, test_df):
                                             s_o[1], s_o[2], s_o[3])
 
 
-def compare_mse(sarima_model, training_set, testing_set):
+def compare_mse(sarima_model, data, test=False, return_val=False, var='count'):
     """
-    Calculates mean squared errors (MSE) for both the training and testing data
+    Calculates mean squared errors (MSE) for the training data
     for a given model so that mse can be compared across models. This function
     is for part 1 of the project (all monthly rentals).
     """
-    predict_train = sarima_model.predict(start=0, end=(len(training_set)))
-    predict_test = sarima_model.predict(start=(len(training_set)),
-                                        end=(len(training_set) +
-                                             len(testing_set)))
-    train_mse = mean_squared_error(training_set['count'], predict_train[:-1])
-    test_mse = mean_squared_error(testing_set['count'], predict_test[:-1])
+    if test:
+        data, test_df = f.train_split(data)
+    
+    predict_train = sarima_model.predict(start=0, end=(len(data)))
+    train_mse = mean_squared_error(data[var], predict_train[:-1])
     print('Training MSE: ', '{:.2e}'.format(train_mse))
-    print('Testing MSE: ', '{:.2e}'.format(test_mse))
-    return train_mse, test_mse
+    
+    if test: 
+        predict_test = sarima_model.predict(start=(len(data)),
+                                            end=(len(data) +
+                                                 len(test_df)))
+        test_mse = mean_squared_error(test_df[var], predict_test[:-1])
+        print('Testing MSE: ', '{:.2e}'.format(test_mse))
+    if return_val:
+        return float(train_mse)       
 
 
 def compare_mse_breakdown(sarima_model, training_set, testing_set, kind):
