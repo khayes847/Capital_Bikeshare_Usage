@@ -7,7 +7,13 @@ import pandas as pd
 
 def import_cleaned():
     """
-    Imports data with correct index
+    Imports data with correct index.
+
+    Parameters:
+    None
+
+    Returns:
+    data: Imported dataset.
     """
     data = pd.read_csv('data/cleaned_for_testing.csv',
                        index_col='date_of_trip')
@@ -17,7 +23,16 @@ def import_cleaned():
 
 def train_split(data, train_percent=.75):
     """
-    Splits data into 75% training and 25% testing data
+    Splits data into 75% training and 25% testing data.
+
+    Parameters:
+    data: Dataset in question.
+    train_percent: Percentage of data that will be in training
+    dataset.
+
+    Returns:
+    train_m: Training dataset.
+    test_m: Test dataset.
     """
     train_index_m = int(len(data) * train_percent) + 1
     train_m = data.iloc[:train_index_m]
@@ -29,16 +44,16 @@ def order_difference(data, var='count', diff=True, s_diff=False):
     """
     Takes time-series dataset, and returns the dataset with
     the specified number of regular and seasonal differences.
-    
+
     Parameters:
     data: The time-series dataset in question.
     var: Variable to be differenced
     diff: Boolean, whether to add a one-month difference.
     s_diff: Boolean, whether to add a 12-month difference.
-    
+
     Returns:
-    data2: The time-series model with the 
-          specified differences enacted.
+    data2: The time-series model with the
+           specified differences enacted.
     """
     data2 = data.copy()
     if diff:
@@ -56,7 +71,13 @@ def order_difference(data, var='count', diff=True, s_diff=False):
 
 def master_breakdown():
     """
-    Returns data divided between member vs. casual rentals
+    Returns data divided between member vs. casual rentals.
+
+    Parameters:
+    None
+
+    Returns:
+    data: Imported dataset.
     """
     data = pd.read_csv('data/master_breakdown.csv',
                        index_col='date_of_trip')
